@@ -1,0 +1,59 @@
+name: release
+env:
+      RELEASE_VERSION: ${{ github.ref_name }}
+on:
+  push:
+    tags:
+     - '**'
+jobs:
+  ts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16.16.0'
+      - run: npm ci
+      - run: npm run ts
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16.16.0'
+      - run: npm ci
+      - run: npm run lint
+  docker:
+    needs: [lint, ts]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          tags: rca:${{ github.ref_name }}
+  update-ticket:
+    runs-on: ubuntu-latest
+    needs: docker
+    steps:
+      - uses: rlespinasse/git-commit-data-action@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16.16.0'
+
+      - name: Git Commit Data
+        uses: rlespinasse/git-commit-data-action@1.3.0
+
+      - name: Set access
+        run: chmod +x ./scripts/release.sh
+
+      - name: Update ticket
+        env:
+          COMMITTER_NAME: echo ${{ env.GIT_COMMIT_COMMITTER_NAME }} | awk '{ print $0 }'
+        run: sh ./scripts/release.sh ${{ secrets.AUTH_TOKEN }} ${{ secrets.ORGANIZATION_ID }} ${{ secrets.TICKET_KEY }} ${{ github.ref_name }} "'${{ env.GIT_COMMIT_COMMITTER_NAME }}'"
