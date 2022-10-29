@@ -12,7 +12,7 @@ const ticketInfoData = JSON.stringify({
 });
 
 const ticketCommentData = JSON.stringify({
-  text: `Собрали образ в тегом ${RELEASE_VERSION}`
+  text: `Собрали образ с тегом ${RELEASE_VERSION}`
 });
 
 const headers = {
